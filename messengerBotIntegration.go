@@ -77,7 +77,7 @@ func botHandler(w http.ResponseWriter, r *http.Request) {
 
 	Msg := M.Entry[0].Messaging[0].message.Text
 	Time := M.Entry[0].Time
-	log.Println("MSG: %s || %s || %d", Sid, Msg, Time)
+	log.Printf("MSG: %s || %s || %d \n", Sid, Msg, Time)
 	input := strings.ToLower(Msg)
 	if Sid == "" && Msg == "" && Time == 0 {
 		log.Println("Invalid Request!")
