@@ -5,4 +5,5 @@ Stackoverflow questions and answer grabber for messenger bot in golang
 
 ## DON'T FORGET TO MODIFY THE `config.go` FILE WITH YOUR OWN CONFIGS!
 
-
+# Demo
+Here is a demo version with some other features https://m.me/AniXeeBot
