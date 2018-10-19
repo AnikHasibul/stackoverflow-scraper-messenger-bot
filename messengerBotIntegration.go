@@ -9,63 +9,61 @@ import (
 	"strings"
 )
 
-type m struct {
+// Json structure for messenger incoming
+type MessageModel struct {
 	Object string
-	Entry  []entry
-}
-type entry struct {
-	Id        string
-	Time      int64
-	Messaging []messaging
-}
-
-type messaging struct {
-	sender struct {
-		Id string
-	}
-	reciepent struct {
-		Id string
-	}
-	message struct {
-		Mid  string
-		Text string
+	Entry  []struct {
+		Id        string
+		Time      int64
+		Messaging []struct {
+			Sender struct {
+				Id string
+			}
+			Reciepent struct {
+				Id string
+			}
+			Message struct {
+				Mid  string
+				Text string
+			}
+		}
 	}
 }
 
+// fb api v2.6 url
 const (
 	facebook_api = "https://graph.facebook.com/v2.6/me/messages?access_token="
 )
 
-var (
-	Answer string
-)
-
 func botHandler(w http.ResponseWriter, r *http.Request) {
+	// Verify the webhook
 	if r.Method == "GET" {
-		challenge := r.URL.Query().Get("hub.challenge")
-		token := r.URL.Query().Get("hub.verify_token")
+		challenge := r.URL.Query().Get(
+			"hub.challenge",
+		)
+		token := r.URL.Query().Get(
+			"hub.verify_token",
+		)
 
 		if token == VERIFY_TOKEN {
+			// Success
 			w.WriteHeader(200)
 			w.Write([]byte(challenge))
-			return
 		} else {
+			// Oops
 			w.WriteHeader(404)
-			w.Write([]byte("Not a verified request!"))
-			return
+			w.Write([]byte(
+				"Not a verified request!",
+			))
 		}
-	}
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Error reading request body:", http.StatusInternalServerError)
-		CheckErr("Error on post data:", err)
 		return
 	}
 
-	var M m
-
-	if err := json.Unmarshal(body, &M); err != nil {
-		log.Println("Error on decoding json from post request", err)
+	// Now have fun with json
+	var M MessageModel
+	if err := json.NewDecoder(r.Body).
+		Decode(&M); err != nil {
+		panic(err)
 		return
 	}
 
@@ -73,25 +71,50 @@ func botHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Sid := M.Entry[0].Messaging[0].sender.Id
+	// The data we need
+	Sid := M.Entry[0].
+		Messaging[0].
+		Sender.Id
 
-	Msg := M.Entry[0].Messaging[0].message.Text
+	Msg := M.Entry[0].
+		Messaging[0].
+		Message.Text
+
 	Time := M.Entry[0].Time
-	log.Printf("MSG: %s || %s || %d \n", Sid, Msg, Time)
+
+	// Logging the message variables
+	log.Printf(
+		"MSG: %s || %s || %d \n",
+		Sid,
+		Msg,
+		Time,
+	)
+
+	// Take a lower case input!
 	input := strings.ToLower(Msg)
-	if Sid == "" && Msg == "" && Time == 0 {
+
+	// Don't response empty shits
+	if Sid == "" &&
+		Msg == "" &&
+		Time == 0 {
 		log.Println("Invalid Request!")
 		return
 	}
+
+	// Now Ask it
 	Ask(Sid, input)
 }
 
+// SendToFb sends a message to facebook
 func SendToFb(id, text string) {
+	// Declare a client
 	client := &http.Client{}
-	textb, jerr := json.Marshal(text)
-	if CheckErr("JsonEncodeOnFbOutput", jerr) != nil {
-		return
-	}
+	// Encode the text to json
+	textb, err := json.Marshal(text)
+	// Error? :/
+	log.Fatal(err)
+
+	// Build it
 	messageData := `
 	{
     recipient: {
@@ -101,15 +124,26 @@ func SendToFb(id, text string) {
       text: ` + string(textb) + `
     }
    }`
+	// Prepare it
 	data := []byte(messageData)
 	url := facebook_api + ACCESS_TOKEN
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
-	req.Header.Add("Content-Type", "application/json")
-	CheckErr("FbRequestErr", err)
+
+	// Send It
+	req, err := http.NewRequest(
+		"POST",
+		url,
+		bytes.NewBuffer(data),
+	)
+	req.Header.Add(
+		"Content-Type",
+		"application/json",
+	)
+	log.Fatal(err)
+	// Boom!
 	resp, err := client.Do(req)
-	CheckErr("FbSendErr", err)
-	body, BodyErr := ioutil.ReadAll(resp.Body)
-	CheckErr("ErrorOnReadingBodyForFbSend: ", BodyErr)
+	log.Fatal(err)
+	body, err := ioutil.ReadAll(resp.Body)
+	log.Println(err)
 	log.Println("RES:", string(body))
 	defer resp.Body.Close()
 }
