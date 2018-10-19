@@ -112,7 +112,9 @@ func SendToFb(id, text string) {
 	// Encode the text to json
 	textb, err := json.Marshal(text)
 	// Error? :/
-	log.Fatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Build it
 	messageData := `
@@ -138,12 +140,21 @@ func SendToFb(id, text string) {
 		"Content-Type",
 		"application/json",
 	)
-	log.Fatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Boom!
 	resp, err := client.Do(req)
-	log.Fatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	body, err := ioutil.ReadAll(resp.Body)
-	log.Println(err)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	log.Println("RES:", string(body))
 	defer resp.Body.Close()
 }
